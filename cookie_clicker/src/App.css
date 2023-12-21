@@ -54,12 +54,25 @@ button {
 .BuyAC {
   margin-top: 20px;
   background-color: antiquewhite;
-  width: 200px;
-  height: 50px;
+  flex: 0 0 calc(33% - 10px);
+  margin: 5px;
   border-radius: 5%;
   transition: transform 0.1s ease;
 }
 
 .BuyAC:hover {
   transform: scale(1.1);
+}
+
+
+.ACButtons {
+  display: flex;
+  flex-wrap: wrap;
+  flex-direction: row;
+  justify-content: start;
+  align-items: stretch;
+  text-align: start;
+  height: 30vh;
+  width: 150vh;
+  gap: 6px;
 }
