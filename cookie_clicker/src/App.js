@@ -1,10 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import Cookie from './Components/Cookie';
 import ScoreBoard from './Components/ScoreBoard';
 import UpgradeButton from './Components/UpgradeButton';
 import ClickMultiplier from './Components/ClickMultiplier';
 import AutoClickerManager from './Components/AutoClickerManager';
+import { doc, setDoc, getDoc } from "firebase/firestore";
+import { db } from './firebase';
 import './App.css';
+
+const userId = "cookie_clicker_user1"; 
 
 function App() {
   const [score, setScore] = useState(0);
@@ -12,6 +16,8 @@ function App() {
   const [clickUpgradeCost, setClickUpgradeCost] = useState(10); // initialize clickUpgradeCost to 100
 
   const [isGameDataLoaded, setIsGameDataLoaded] = useState(false);
+
+  const [count, setCount] = useState(0); // initialize count to 0
 
   const autoClickerShop = [
     { cost: 100, CPS: 1 },    // index 0
@@ -59,18 +65,28 @@ function App() {
     };
   }
   
-  const loadGameData = () => {
+  const loadGameData = async () => {
     const gameState = JSON.parse(localStorage.getItem('gameState'));
     if (gameState) {
       setScore(gameState.score);
       setClickMultiplier(gameState.clickMultiplier);
       setClickUpgradeCost(gameState.clickUpgradeCost);
       setAutoClickersOwned(gameState.autoClickersOwned);
-    }
-    setIsGameDataLoaded(true);
+    } else {
+      const docRef = doc(db, "gameStates", userId);
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists()) {
+        const gameState = docSnap.data();
+        setScore(gameState.score);
+        setClickMultiplier(gameState.clickMultiplier);
+        setClickUpgradeCost(gameState.clickUpgradeCost);
+        setAutoClickersOwned(gameState.autoClickersOwned);
+      } 
+    } setIsGameDataLoaded(true);
   }
 
-  const saveGameData = () => {
+  const saveDataToFirestore = async () => {
     const gameState = {
       score,
       clickMultiplier,
@@ -78,7 +94,13 @@ function App() {
       autoClickersOwned
     };
 
-    localStorage.setItem('gameState', JSON.stringify(gameState));
+    const docRef = doc(db, "gameStates", userId);
+    try {
+      await setDoc(docRef, gameState);
+      console.log("Document written with ID: ", docRef.id);
+    } catch (e) {
+      console.error("Error adding document: ", e);
+    }
   };
 
   useEffect(() => {
@@ -87,8 +109,6 @@ function App() {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      // store the total CPS (cookies per second) in totalCPS
-      
       setScore(prevScore => prevScore + totalCPS/30);
     }, 1000/30);
 
@@ -96,10 +116,29 @@ function App() {
   }, [autoClickersOwned]);
 
   useEffect(() => {
-    if (isGameDataLoaded) {
-      saveGameData();
-    }
-  }, [score, clickMultiplier, clickUpgradeCost, autoClickersOwned]);
+    const interval = setInterval(() => {
+      setCount(count + 1);
+      console.log(count);
+      const gameState = {
+        score,
+        clickMultiplier,
+        clickUpgradeCost,
+        autoClickersOwned
+      };
+      localStorage.setItem('gameState', JSON.stringify(gameState));
+    }, 3000);
+
+    //Clearing the interval
+    return () => clearInterval(interval);
+  }, [count]);  
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      saveDataToFirestore();
+    }, 120000); // save data to firestore every 2 minutes
+
+    return () => clearInterval(interval);
+  }, [count]);
   
 
   return (
