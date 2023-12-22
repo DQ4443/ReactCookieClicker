@@ -118,7 +118,6 @@ function App() {
   useEffect(() => {
     const interval = setInterval(() => {
       setCount(count + 1);
-      console.log(count);
       const gameState = {
         score,
         clickMultiplier,
